@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ЭтоBalon VK API test</title>
+<script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
+<style>body{font:16px Arial,sans-serif;margin:32px;background:#f4f6f8;color:#111}button{font-size:18px;padding:14px 22px;border:0;border-radius:10px;background:#07f;color:#fff;cursor:pointer}pre{white-space:pre-wrap;background:#fff;padding:16px;border-radius:10px;margin-top:18px}</style>
+</head>
+<body>
+<h2>ЭтоBalon — проверка доступа к фото VK</h2>
+<p>Ничего не публикуется. Проверяется только доступ к серверу загрузки фотографии.</p>
+<button id="test">Проверить доступ photos</button>
+<pre id="out">Готово к проверке.</pre>
+<script>
+const APP_ID=54775339, GROUP_ID=238465684, V='5.199';
+const out=document.getElementById('out');
+const bridge=window.vkBridge && (window.vkBridge.default || window.vkBridge);
+async function init(){if(!bridge)throw new Error('VK Bridge не загрузился');await bridge.send('VKWebAppInit');}
+document.getElementById('test').onclick=async()=>{
+ out.textContent='Запрашиваю user token: photos,wall,groups…';
+ try{
+  await init();
+  const auth=await bridge.send('VKWebAppGetAuthToken',{app_id:APP_ID,scope:'photos,wall,groups'});
+  if(!auth||!auth.access_token)throw new Error('VK не вернул access_token');
+  out.textContent='Токен получен. Проверяю photos.getWallUploadServer…';
+  const api=await bridge.send('VKWebAppCallAPIMethod',{method:'photos.getWallUploadServer',params:{group_id:GROUP_ID,access_token:auth.access_token,v:V}});
+  const r=api&&api.response;
+  if(r&&r.upload_url){out.textContent='УСПЕХ: VK вернул upload_url.\nscope: '+(auth.scope||'')+'\nПубликаций не было.';}
+  else{out.textContent='Ответ VK без upload_url:\n'+JSON.stringify(api,null,2);}
+ }catch(e){out.textContent='ОШИБКА:\n'+(e&&(e.message||JSON.stringify(e,null,2))||String(e));}
+};
+init().catch(()=>{});
+</script>
+</body>
+</html>
